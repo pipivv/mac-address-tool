@@ -176,9 +176,24 @@ namespace MacTool {
   double FontSize {get{return Convert.ToDouble(Window.Resources["BodySize"]);}}
   void SetFontSize(int index){fontIndex=index;double multiplier=index==0?1:index==1?1.10:1.20;Window.Resources["BodySize"]=16*multiplier;Window.Resources["SmallSize"]=13*multiplier;Window.Resources["HeadingSize"]=21*(1+index*.05);C<TextBlock>("CurrentMac").FontSize=26*multiplier;C<TextBlock>("PermanentMac").FontSize=23*multiplier;C<TextBox>("Address").FontSize=28*multiplier;AnimateSegment("SizeThumb",82*index);Window.Dispatcher.BeginInvoke(new Action(UpdatePageSize),DispatcherPriority.Loaded);}
   void AnimateSegment(string name,double x){var element=C<Border>(name);var transform=(TranslateTransform)element.RenderTransform;transform.BeginAnimation(TranslateTransform.XProperty,new DoubleAnimation(x,TimeSpan.FromMilliseconds(reducedMotion?0:230)){EasingFunction=new BackEase{Amplitude=.10,EasingMode=EasingMode.EaseOut}});}
-  void AnimateSwitch(bool enabled){var check=C<CheckBox>("Virtuals");check.ApplyTemplate();var thumb=check.Template.FindName("Thumb",check) as EllipseGeometry;var ellipse=check.Template.FindName("Thumb",check) as System.Windows.Shapes.Ellipse;if(ellipse!=null)((TranslateTransform)ellipse.RenderTransform).BeginAnimation(TranslateTransform.XProperty,new DoubleAnimation(enabled?20:0,TimeSpan.FromMilliseconds(reducedMotion?0:180)){EasingFunction=new CubicEase{EasingMode=EasingMode.EaseOut}});}
+  void AnimateSwitch(bool enabled){
+   var check=C<CheckBox>("Virtuals");
+   check.ApplyTemplate();
+   var thumb=check.Template.FindName("Thumb",check) as System.Windows.Shapes.Ellipse;
+   if(thumb==null)return;
+   var movement=(TranslateTransform)thumb.RenderTransform;
+   if(movement.IsFrozen){
+    movement=movement.Clone();
+    thumb.RenderTransform=movement;
+   }
+   var animation=new DoubleAnimation(enabled?20:0,TimeSpan.FromMilliseconds(reducedMotion?0:180));
+   animation.EasingFunction=new CubicEase{EasingMode=EasingMode.EaseOut};
+   movement.BeginAnimation(TranslateTransform.XProperty,animation);
+  }
   void Reveal(UIElement element){element.BeginAnimation(UIElement.OpacityProperty,new DoubleAnimation(.68,1,TimeSpan.FromMilliseconds(reducedMotion?0:160)));}
   void WireMotion(){foreach(var button in VisualChildren<Button>(Window)){
+   var sharedScale=button.RenderTransform as ScaleTransform;
+   if(sharedScale!=null)button.RenderTransform=sharedScale.Clone();
    button.MouseEnter+=(s,e)=>{var hover=button.Template.FindName("Hover",button) as Border;if(hover!=null)hover.BeginAnimation(UIElement.OpacityProperty,new DoubleAnimation(.1,TimeSpan.FromMilliseconds(reducedMotion?0:100)));};
    button.MouseLeave+=(s,e)=>{var hover=button.Template.FindName("Hover",button) as Border;if(hover!=null)hover.BeginAnimation(UIElement.OpacityProperty,new DoubleAnimation(0,TimeSpan.FromMilliseconds(reducedMotion?0:140)));ScaleButton(button,1);};
    button.PreviewMouseLeftButtonDown+=(s,e)=>ScaleButton(button,.965);button.PreviewMouseLeftButtonUp+=(s,e)=>ScaleButton(button,1);
@@ -199,7 +214,21 @@ namespace MacTool {
    foreach(string query in new[]{"英特尔","苹果","a","华为",""}){C<TextBox>("Search").Text=query;searchTimer.Stop();await Search(true);if(visible.Count>100)throw new Exception("Visible vendor limit exceeded.");}
    int old=page;if(visible.Count>pageSize){ChangePage(1);if(page==old)throw new Exception("Paging failed.");ChangePage(-1);}
    for(int i=0;i<3;i++){C<RadioButton>("Size"+i).IsChecked=true;await Task.Delay(30);}SetFontSize(1);
-   SetTheme(true);await Task.Delay(30);SetTheme(false);reducedMotion=true;AnimateSegment("SizeThumb",82);reducedMotion=false;
+   var themeButton=C<Button>("Theme");
+   foreach(bool motionOff in new[]{false,true}){
+    reducedMotion=motionOff;
+    foreach(var button in VisualChildren<Button>(Window).Where(b=>b.RenderTransform is ScaleTransform).ToList()){
+     button.RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice,Environment.TickCount,MouseButton.Left){RoutedEvent=UIElement.PreviewMouseLeftButtonDownEvent});
+     button.RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice,Environment.TickCount,MouseButton.Left){RoutedEvent=UIElement.PreviewMouseLeftButtonUpEvent});
+     button.RaiseEvent(new MouseEventArgs(Mouse.PrimaryDevice,Environment.TickCount){RoutedEvent=UIElement.MouseLeaveEvent});
+    }
+    foreach(bool expectedDark in new[]{true,false}){
+     themeButton.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+     if(dark!=expectedDark)throw new Exception("Appearance button did not switch theme.");
+    }
+    var virtuals=C<CheckBox>("Virtuals");virtuals.IsChecked=true;virtuals.IsChecked=false;
+   }
+   reducedMotion=false;
    for(int i=0;i<8;i++){Generate();if(!Mac.Valid(C<TextBox>("Address").Text))throw new Exception("Invalid generated address.");}
    string vendor=C<ListBox>("Vendors").SelectedItem as string;if(!IsLocal&&!IsRandom&&!database.Lookup(C<TextBox>("Address").Text).Vendor.Equals(vendor,StringComparison.OrdinalIgnoreCase))throw new Exception("Vendor selection mismatch.");
    C<ComboBox>("AddressMode").SelectedIndex=1;Generate();if(!Mac.Local(C<TextBox>("Address").Text))throw new Exception("Local mode failed.");C<ComboBox>("AddressMode").SelectedIndex=0;
