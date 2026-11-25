@@ -1,0 +1,11 @@
+/dist/
+/artifacts/
+/private-checks/
+*.pdb
+*.error.txt
+*.log
+*.user
+*.suo
+*.tmp
+obj/
+bin/
