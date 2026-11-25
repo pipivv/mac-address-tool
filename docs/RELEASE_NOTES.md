@@ -1,6 +1,6 @@
-# v2.0.1
+# v2.0.2
 
-修复点击“外观”、按下或移出其他按钮时可能弹出动画异常的问题，同时修复“显示虚拟网卡”开关的同类错误。已有用户可下载此版本的 MacAddressTool.exe 替换旧文件。
+桌面程序使用新的蓝色圆角双向箭头图标，内置从 16 到 256 像素的十种尺寸。此版本包含 v2.0.1 对外观按钮和虚拟网卡开关的动画修复。
 
 如果启动时提示缺少 .NET Framework 4.8，请安装微软官方运行时，再打开 `MacAddressTool.exe`。[在线安装](https://dotnet.microsoft.com/zh-cn/download/dotnet-framework/thank-you/net48-web-installer) · [离线安装包](https://dotnet.microsoft.com/zh-cn/download/dotnet-framework/thank-you/net48-offline-installer)
 
