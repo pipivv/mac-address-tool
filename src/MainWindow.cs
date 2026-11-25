@@ -45,6 +45,10 @@ namespace MacTool {
   public UiController(bool demo){
    this.demo=demo;
    using(var stream=Assembly.GetExecutingAssembly().GetManifestResourceStream("MainWindow.xaml"))Window=(Window)XamlReader.Load(stream);
+   using(var iconStream=Assembly.GetExecutingAssembly().GetManifestResourceStream("app.ico")){
+    var icon=new IconBitmapDecoder(iconStream,BitmapCreateOptions.PreservePixelFormat,BitmapCacheOption.OnLoad);
+    Window.Icon=icon.Frames.OrderByDescending(frame=>frame.PixelWidth).First();
+   }
    if(demo)Window.Title="MAC 地址工具 · 示例";
    var area=SystemParameters.WorkArea;Window.Width=Math.Min(1180,area.Width*.94);Window.Height=Math.Min(800,area.Height*.92);Window.MinWidth=Math.Min(860,area.Width*.9);Window.MinHeight=Math.Min(580,area.Height*.88);Window.WindowStartupLocation=WindowStartupLocation.CenterScreen;
    Window.SizeChanged+=(s,e)=>FitPage();

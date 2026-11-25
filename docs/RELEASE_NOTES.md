@@ -1,6 +1,6 @@
-# v2.0.2
+# v2.0.3
 
-桌面程序使用新的蓝色圆角双向箭头图标，内置从 16 到 256 像素的十种尺寸。此版本包含 v2.0.1 对外观按钮和虚拟网卡开关的动画修复。
+窗口左上角、窗口图标和桌面 EXE 现共用同一份蓝色双向箭头图标，切换深浅色时保持一致。
 
 如果启动时提示缺少 .NET Framework 4.8，请安装微软官方运行时，再打开 `MacAddressTool.exe`。[在线安装](https://dotnet.microsoft.com/zh-cn/download/dotnet-framework/thank-you/net48-web-installer) · [离线安装包](https://dotnet.microsoft.com/zh-cn/download/dotnet-framework/thank-you/net48-offline-installer)
 

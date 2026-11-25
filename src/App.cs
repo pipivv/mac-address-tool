@@ -14,8 +14,8 @@ using System.Windows.Threading;
 [assembly:AssemblyDescription("Offline Windows MAC utility with a Liquid Glass inspired interface")]
 [assembly:AssemblyCompany("MAC Address Tool contributors")]
 [assembly:AssemblyCopyright("Copyright 2026 MAC Address Tool contributors")]
-[assembly:AssemblyVersion("2.0.2.0")]
-[assembly:AssemblyFileVersion("2.0.2.0")]
+[assembly:AssemblyVersion("2.0.3.0")]
+[assembly:AssemblyFileVersion("2.0.3.0")]
 namespace MacTool {
  public static class App {
   [STAThread] public static int Main(string[] args){
