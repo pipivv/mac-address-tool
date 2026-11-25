@@ -108,7 +108,7 @@
        <CheckBox Grid.Row="2" x:Name="Virtuals" Content="显示虚拟网卡" Style="{StaticResource Switch}" VerticalAlignment="Center"/>
        <TextBlock Grid.Row="3" x:Name="AdapterState" Text="正在读取网卡…" Style="{StaticResource Small}"/>
        <StackPanel Grid.Row="4" Margin="0,8,0,0"><TextBlock Text="当前 MAC" Style="{StaticResource Small}"/><TextBlock x:Name="CurrentMac" Text="—" FontFamily="Consolas" FontWeight="SemiBold" FontSize="26" Margin="0,2,0,0"/></StackPanel>
-       <StackPanel Grid.Row="5" Margin="0,10,0,0"><TextBlock Text="硬件永久地址" Style="{StaticResource Small}"/><TextBlock x:Name="PermanentMac" Text="—" FontFamily="Consolas" FontSize="23" Margin="0,2,0,0"/></StackPanel>
+       <StackPanel Grid.Row="5" Margin="0,10,0,0"><TextBlock x:Name="PermanentLabel" Text="出厂默认地址" ToolTip="由网卡驱动报告的永久 MAC 地址" Style="{StaticResource Small}"/><TextBlock x:Name="PermanentMac" Text="—" FontFamily="Consolas" FontSize="23" Margin="0,2,0,0"/></StackPanel>
       </Grid></Border>
       <Border Grid.Row="2" Style="{StaticResource Card}" Padding="24,20"><Grid><Grid.RowDefinitions><RowDefinition Height="36"/><RowDefinition Height="48"/><RowDefinition Height="10"/><RowDefinition/></Grid.RowDefinitions>
        <TextBlock Text="应用与恢复" Style="{StaticResource Heading}"/>

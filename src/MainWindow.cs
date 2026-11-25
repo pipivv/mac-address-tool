@@ -119,7 +119,7 @@ namespace MacTool {
    var list=adapters.Where(a=>C<CheckBox>("Virtuals").IsChecked==true||a.Physical).ToList();
    binding=true;C<ComboBox>("Adapters").ItemsSource=list;C<ComboBox>("Adapters").SelectedItem=list.FirstOrDefault(a=>a.Id==previous)??list.FirstOrDefault(a=>a.Status=="Up")??list.FirstOrDefault();binding=false;ShowAdapter();
   }
-  void ShowAdapter(){var a=SelectedAdapter;C<TextBlock>("CurrentMac").Text=a==null?"—":Mac.Format(a.Current);C<TextBlock>("PermanentMac").Text=a==null?"—":Mac.Format(a.Permanent);C<TextBlock>("AdapterState").Text=a==null?(networkLoading?"正在读取网卡…":"未找到网卡"):(a.Wireless?"无线网卡":"以太网")+" · "+(a.Status=="Up"?"已连接":a.Disabled?"已禁用":"未连接");RefreshControls();}
+  void ShowAdapter(){var a=SelectedAdapter;C<TextBlock>("PermanentLabel").Text=a!=null && a.Physical?"出厂默认地址":"永久 MAC 地址";C<TextBlock>("CurrentMac").Text=a==null?"—":Mac.Format(a.Current);C<TextBlock>("PermanentMac").Text=a==null?"—":Mac.Format(a.Permanent);C<TextBlock>("AdapterState").Text=a==null?(networkLoading?"正在读取网卡…":"未找到网卡"):(a.Wireless?"无线网卡":"以太网")+" · "+(a.Status=="Up"?"已连接":a.Disabled?"已禁用":"未连接");RefreshControls();}
   async Task Search(bool generateAfter){
    if(database==null)return;int version=++searchVersion;string query=C<TextBox>("Search").Text.Trim(),selected=selectedVendor;searching=true;RefreshControls();
    try{var result=await Task.Run(()=>database.Query(query,selected));if(version!=searchVersion)return;searching=false;ApplyQuery(result);if(generateAfter)Generate();}
