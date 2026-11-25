@@ -1,8 +1,6 @@
-# v2.0.4_2026-11-25
+# v2.0.5_2026-11-25
 
-窗口左上角、窗口图标和桌面 EXE 现共用同一份蓝色双向箭头图标，切换深浅色时保持一致。
-
-工具名称下方显示署名、版本号和更新日期 `By 皮总 · v2.0.4_2026-11-25`。此版本包含按钮和开关的动画修复。
+网卡状态与两个 MAC 地址连续排列，厂商翻页按钮紧随实际条目。三个生成模式可直接切换，选择本地地址时收起厂商列表，切回自选厂商即可搜索并选择。
 
 如果启动时提示缺少 .NET Framework 4.8，请安装微软官方运行时，再打开 `MacAddressTool.exe`。[在线安装](https://dotnet.microsoft.com/zh-cn/download/dotnet-framework/thank-you/net48-web-installer) · [离线安装包](https://dotnet.microsoft.com/zh-cn/download/dotnet-framework/thank-you/net48-offline-installer)
 

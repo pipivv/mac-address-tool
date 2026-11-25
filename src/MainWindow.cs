@@ -54,7 +54,7 @@ namespace MacTool {
     Window.Icon=icon.Frames.OrderByDescending(frame=>frame.PixelWidth).First();
    }
    if(demo)Window.Title="MAC 地址工具 · 示例";
-   var area=SystemParameters.WorkArea;Window.Width=Math.Min(1180,area.Width*.94);Window.Height=Math.Min(800,area.Height*.92);Window.MinWidth=Math.Min(860,area.Width*.9);Window.MinHeight=Math.Min(580,area.Height*.88);Window.WindowStartupLocation=WindowStartupLocation.CenterScreen;
+   var area=SystemParameters.WorkArea;Window.Width=Math.Min(1180,area.Width*.94);Window.Height=Math.Min(690,area.Height*.92);Window.MinWidth=Math.Min(860,area.Width*.9);Window.MinHeight=Math.Min(580,area.Height*.88);Window.WindowStartupLocation=WindowStartupLocation.CenterScreen;
    Window.SizeChanged+=(s,e)=>FitPage();
    Window.Loaded+=async(s,e)=>{SetFontSize(1);FitPage();WireMotion();initialization=Initialize();await initialization;};
    Window.Closing+=(s,e)=>{if(busy)e.Cancel=true;};
@@ -68,15 +68,21 @@ namespace MacTool {
    C<Button>("Refresh").Click+=async(s,e)=>await ReadAdapters();
    C<CheckBox>("Virtuals").Checked+=(s,e)=>{AnimateSwitch(true);BindAdapters();};C<CheckBox>("Virtuals").Unchecked+=(s,e)=>{AnimateSwitch(false);BindAdapters();};
    C<ComboBox>("Adapters").SelectionChanged+=(s,e)=>{if(!binding)ShowAdapter();};
-   C<ComboBox>("AddressMode").SelectionChanged+=(s,e)=>{if(database!=null){RefreshControls();Generate();}};
-   C<RadioButton>("ChooseVendor").Checked+=(s,e)=>{AnimateSegment("VendorThumb",0);RefreshControls();};
-   C<RadioButton>("RandomVendor").Checked+=(s,e)=>{AnimateSegment("VendorThumb",122);RefreshControls();};
+   foreach(var name in new[]{"ChooseVendor","RandomVendor","LocalMode"}){
+    C<RadioButton>(name).Checked+=async(s,e)=>{
+     AnimateSegment("VendorThumb",IsLocal?196:IsRandom?98:0);
+     RefreshControls();
+     if(!IsLocal && (searching || C<TextBox>("Search").Text.Trim()!=appliedQuery)){
+      searchTimer.Stop();await Search(true);
+     }else Generate();
+    };
+   }
    C<TextBox>("Search").TextChanged+=(s,e)=>{searchVersion++;C<TextBlock>("SearchHint").Visibility=string.IsNullOrEmpty(C<TextBox>("Search").Text)?Visibility.Visible:Visibility.Collapsed;searchTimer.Stop();searchTimer.Start();RefreshControls();};
    searchTimer.Tick+=async(s,e)=>{searchTimer.Stop();await Search(false);};
    C<ListBox>("Vendors").SelectionChanged+=(s,e)=>{if(binding)return;selectedVendor=C<ListBox>("Vendors").SelectedItem as string;if(database!=null&&!IsRandom)Generate();};
    C<Button>("Previous").Click+=(s,e)=>ChangePage(-1);C<Button>("Next").Click+=(s,e)=>ChangePage(1);
-   C<ListBox>("Vendors").SizeChanged+=(s,e)=>UpdatePageSize();
-   C<Button>("Generate").Click+=async(s,e)=>{searchTimer.Stop();if(C<TextBox>("Search").Text.Trim()!=appliedQuery||searching)await Search(true);else Generate();};
+   C<Grid>("MainContent").SizeChanged+=(s,e)=>UpdatePageSize();
+   C<Button>("Generate").Click+=async(s,e)=>{searchTimer.Stop();if(!IsLocal&&(C<TextBox>("Search").Text.Trim()!=appliedQuery||searching))await Search(true);else Generate();};
    C<TextBox>("Address").TextChanged+=(s,e)=>ShowMatch();
    C<Button>("Copy").Click+=(s,e)=>{try{Clipboard.SetText(Mac.Format(C<TextBox>("Address").Text));Toast("地址已复制");}catch(Exception ex){Error("无法复制地址",ex.Message);}};
    C<Button>("Apply").Click+=async(s,e)=>await Change("set");C<Button>("Reset").Click+=async(s,e)=>await Change("reset");C<Button>("Undo").Click+=async(s,e)=>await Change("undo");
@@ -84,14 +90,14 @@ namespace MacTool {
    Window.PreviewKeyDown+=(s,e)=>{if(e.Key==Key.Escape&&sheetCompletion!=null&&!busy){CompleteSheet(false);e.Handled=true;}};
    RefreshControls();
   }
-  bool IsLocal {get{return C<ComboBox>("AddressMode").SelectedIndex==1;}}
+  bool IsLocal {get{return C<RadioButton>("LocalMode").IsChecked==true;}}
   bool IsRandom {get{return C<RadioButton>("RandomVendor").IsChecked==true;}}
   Adapter SelectedAdapter {get{return C<ComboBox>("Adapters").SelectedItem as Adapter;}}
   static T Ancestor<T>(DependencyObject source) where T:DependencyObject {while(source!=null){var match=source as T;if(match!=null)return match;source=source is Visual?VisualTreeHelper.GetParent(source):LogicalTreeHelper.GetParent(source);}return null;}
   void ToggleMaximize(){Window.WindowState=Window.WindowState==WindowState.Maximized?WindowState.Normal:WindowState.Maximized;}
   public void FitPage(){
    var viewport=C<Grid>("Viewport");var design=C<Grid>("Design");if(viewport==null||viewport.ActualWidth<1||viewport.ActualHeight<1)return;
-   double scale=Math.Min(1.25,Math.Min(viewport.ActualWidth/1100,viewport.ActualHeight/760));scale=Math.Max(.3,scale);
+   double scale=Math.Min(1.25,Math.Min(viewport.ActualWidth/1100,viewport.ActualHeight/680));scale=Math.Max(.3,scale);
    C<ScaleTransform>("PageScale").ScaleX=scale;C<ScaleTransform>("PageScale").ScaleY=scale;
    design.Width=viewport.ActualWidth/scale;design.Height=viewport.ActualHeight/scale;
   }
@@ -120,7 +126,16 @@ namespace MacTool {
    catch(Exception ex){if(version==searchVersion){searching=false;Error("搜索失败",ex.Message);}}finally{RefreshControls();}
   }
   void ApplyQuery(VendorQuery query){matches=query.Matches;visible=query.Visible;appliedQuery=query.Text;MaximumVisibleCount=Math.Max(MaximumVisibleCount,visible.Count);page=0;BindPage(true);RefreshControls();}
-  void UpdatePageSize(){var list=C<ListBox>("Vendors");int size=Math.Max(1,Math.Min(12,(int)(list.ActualHeight/(FontSize*1.45+22))));if(size==pageSize)return;pageSize=size;BindPage(true);}
+  void UpdatePageSize(){
+   // Reserve space for card padding, search, pager and address controls.
+   double available=C<Grid>("MainContent").ActualHeight-390;
+   double rowHeight=Math.Ceiling(FontSize*1.5)+8;
+   Window.Resources["VendorRowHeight"]=rowHeight;
+   int size=Math.Max(1,Math.Min(12,(int)(available/(rowHeight+2))));
+   if(size==pageSize)return;
+   pageSize=size;
+   BindPage(true);
+  }
   void BindPage(bool preserve){
    int index=visible.FindIndex(s=>s.Equals(selectedVendor,StringComparison.OrdinalIgnoreCase));if(preserve&&index>=0)page=index/Math.Max(1,pageSize);
    int pages=Math.Max(1,(visible.Count+pageSize-1)/pageSize);page=Math.Max(0,Math.Min(page,pages-1));var rows=visible.Skip(page*pageSize).Take(pageSize).ToList();
@@ -129,7 +144,7 @@ namespace MacTool {
   }
   void ChangePage(int direction){page+=direction;BindPage(false);if(!IsRandom)Generate();}
   void Generate(){
-   if(database==null||generator==null||busy||searching)return;
+   if(database==null||generator==null||busy||(!IsLocal&&searching))return;
    if(!IsLocal&&(matches.Count==0||(!IsRandom&&string.IsNullOrEmpty(selectedVendor))))return;
    string vendor=IsLocal?null:IsRandom?matches[generator.Index(matches.Count)]:selectedVendor;
    var excluded=new HashSet<string>(used);foreach(var a in adapters)if(a.Current!=null)excluded.Add(a.Current);
@@ -139,14 +154,15 @@ namespace MacTool {
   void RefreshControls(){
    bool ready=database!=null&&!busy,local=IsLocal;
    C<TextBox>("Search").IsEnabled=ready&&!local;C<ListBox>("Vendors").IsEnabled=ready&&!local&&!searching;
-   C<RadioButton>("ChooseVendor").IsEnabled=ready&&!local;C<RadioButton>("RandomVendor").IsEnabled=ready&&!local;
+   C<StackPanel>("VendorTools").Visibility=local?Visibility.Collapsed:Visibility.Visible;
+   foreach(var name in new[]{"ChooseVendor","RandomVendor","LocalMode"})C<RadioButton>(name).IsEnabled=ready;
    C<Button>("Generate").Content=local?"生成本地地址":IsRandom?"随机厂商生成":"按所选厂商生成";
-   C<Button>("Generate").IsEnabled=ready&&!searching&&(local||matches.Count>0);
+   C<Button>("Generate").IsEnabled=ready&&(local||(!searching&&matches.Count>0));
    C<Button>("Copy").IsEnabled=Mac.Valid(C<TextBox>("Address").Text);
    var a=SelectedAdapter;bool change=!demo&&!busy&&!networkLoading&&a!=null&&a.RegistryPath!=null;
    C<Button>("Apply").IsEnabled=change&&Mac.Valid(C<TextBox>("Address").Text);C<Button>("Reset").IsEnabled=change;C<Button>("Undo").IsEnabled=change&&a.HasPreviousSetting;
    C<Button>("Refresh").IsEnabled=!busy&&!networkLoading;C<ComboBox>("Adapters").IsEnabled=!busy&&!networkLoading;
-   C<ComboBox>("AddressMode").IsEnabled=!busy;C<CheckBox>("Virtuals").IsEnabled=!busy;C<TextBox>("Address").IsReadOnly=busy;
+   C<CheckBox>("Virtuals").IsEnabled=!busy;C<TextBox>("Address").IsReadOnly=busy;
    int pages=Math.Max(1,(visible.Count+pageSize-1)/pageSize);C<Button>("Previous").IsEnabled=ready&&!local&&!searching&&page>0;C<Button>("Next").IsEnabled=ready&&!local&&!searching&&page+1<pages;
    C<TextBlock>("VendorCount").Text=database==null?"正在加载厂商…":searching?"正在搜索…":appliedQuery.Length==0?"常用厂商 · "+visible.Count:matches.Count>100?"找到 "+matches.Count.ToString("N0")+" 个 · 前 100 个":"找到 "+matches.Count+" 个厂商";
   }
@@ -183,7 +199,7 @@ namespace MacTool {
   async void Toast(string message){var toast=C<Border>("Toast");C<TextBlock>("ToastText").Text=message;toast.Visibility=Visibility.Visible;Reveal(toast);await Task.Delay(1600);toast.Visibility=Visibility.Collapsed;}
   double FontSize {get{return Convert.ToDouble(Window.Resources["BodySize"]);}}
   void SetFontSize(int index){fontIndex=index;double multiplier=index==0?1:index==1?1.10:1.20;Window.Resources["BodySize"]=16*multiplier;Window.Resources["SmallSize"]=13*multiplier;Window.Resources["HeadingSize"]=21*(1+index*.05);C<TextBlock>("CurrentMac").FontSize=26*multiplier;C<TextBlock>("PermanentMac").FontSize=23*multiplier;C<TextBox>("Address").FontSize=28*multiplier;AnimateSegment("SizeThumb",82*index);Window.Dispatcher.BeginInvoke(new Action(UpdatePageSize),DispatcherPriority.Loaded);}
-  void AnimateSegment(string name,double x){var element=C<Border>(name);var transform=(TranslateTransform)element.RenderTransform;transform.BeginAnimation(TranslateTransform.XProperty,new DoubleAnimation(x,TimeSpan.FromMilliseconds(reducedMotion?0:230)){EasingFunction=new BackEase{Amplitude=.10,EasingMode=EasingMode.EaseOut}});}
+  void AnimateSegment(string name,double x){var element=C<Border>(name);var transform=(TranslateTransform)element.RenderTransform;if(reducedMotion){transform.BeginAnimation(TranslateTransform.XProperty,null);transform.X=x;return;}transform.BeginAnimation(TranslateTransform.XProperty,new DoubleAnimation(x,TimeSpan.FromMilliseconds(230)){EasingFunction=new BackEase{Amplitude=.10,EasingMode=EasingMode.EaseOut}});}
   void AnimateSwitch(bool enabled){
    var check=C<CheckBox>("Virtuals");
    check.ApplyTemplate();
@@ -208,7 +224,7 @@ namespace MacTool {
   }UpdateMotionLabel();ApplyPopupMotion();}
   void UpdateMotionLabel(){C<Button>("Motion").Content=reducedMotion?"动效 · 关":"动效 · 开";}
   void ScaleButton(Button button,double scale){var transform=button.RenderTransform as ScaleTransform;if(transform==null)return;var easing=new CubicEase{EasingMode=EasingMode.EaseOut};transform.BeginAnimation(ScaleTransform.ScaleXProperty,new DoubleAnimation(scale,TimeSpan.FromMilliseconds(reducedMotion?0:130)){EasingFunction=easing});transform.BeginAnimation(ScaleTransform.ScaleYProperty,new DoubleAnimation(scale,TimeSpan.FromMilliseconds(reducedMotion?0:130)){EasingFunction=easing});}
-  void ApplyPopupMotion(){foreach(var combo in new[]{C<ComboBox>("Adapters"),C<ComboBox>("AddressMode")}){combo.ApplyTemplate();var popup=combo.Template.FindName("PART_Popup",combo) as Popup;if(popup!=null)popup.PopupAnimation=reducedMotion?PopupAnimation.None:PopupAnimation.Fade;}}
+  void ApplyPopupMotion(){foreach(var combo in new[]{C<ComboBox>("Adapters")}){combo.ApplyTemplate();var popup=combo.Template.FindName("PART_Popup",combo) as Popup;if(popup!=null)popup.PopupAnimation=reducedMotion?PopupAnimation.None:PopupAnimation.Fade;}}
   void SetTheme(bool value){
    dark=value;C<Button>("Theme").Content=dark?"外观 · 深色":"外观 · 浅色";
    string[] names={"WindowBrush","SurfaceBrush","GlassBrush","FieldBrush","InkBrush","MutedBrush","LineBrush","AccentSoftBrush","SelectionBrush","BlueGlow","MintGlow","AccentBrush","PrimaryBrush"};
@@ -239,12 +255,17 @@ namespace MacTool {
    reducedMotion=false;
    for(int i=0;i<8;i++){Generate();if(!Mac.Valid(C<TextBox>("Address").Text))throw new Exception("Invalid generated address.");}
    string vendor=C<ListBox>("Vendors").SelectedItem as string;if(!IsLocal&&!IsRandom&&!database.Lookup(C<TextBox>("Address").Text).Vendor.Equals(vendor,StringComparison.OrdinalIgnoreCase))throw new Exception("Vendor selection mismatch.");
-   C<ComboBox>("AddressMode").SelectedIndex=1;Generate();if(!Mac.Local(C<TextBox>("Address").Text))throw new Exception("Local mode failed.");C<ComboBox>("AddressMode").SelectedIndex=0;
+   C<RadioButton>("LocalMode").IsChecked=true;Window.UpdateLayout();if(C<ListBox>("Vendors").IsVisible)throw new Exception("Local mode shows vendor controls.");Generate();if(!Mac.Local(C<TextBox>("Address").Text))throw new Exception("Local mode failed.");C<RadioButton>("ChooseVendor").IsChecked=true;Window.UpdateLayout();if(!C<ListBox>("Vendors").IsEnabled||!C<ListBox>("Vendors").IsVisible)throw new Exception("Cannot select vendors after local mode.");
    int layouts=0,textChecks=0;reducedMotion=true;
    foreach(var size in new[]{new[]{860,580},new[]{900,650},new[]{1180,800},new[]{1366,768},new[]{1920,1080}}){
     Window.Width=size[0];Window.Height=size[1];
     for(int font=0;font<3;font++){
      C<RadioButton>("Size"+font).IsChecked=true;SetFontSize(font);await Task.Delay(40);FitPage();Window.UpdateLayout();ValidateViewport();textChecks+=ValidateText();layouts++;
+     if(size[0]==1180 && font==1){
+      SetTheme(true);Window.UpdateLayout();RenderDemo(Path.Combine(captureDirectory,"compact-dark.png"));
+      C<RadioButton>("LocalMode").IsChecked=true;Window.UpdateLayout();RenderDemo(Path.Combine(captureDirectory,"compact-local.png"));
+      C<RadioButton>("ChooseVendor").IsChecked=true;SetTheme(false);
+     }
      if(size[0]==1180)RenderDemo(Path.Combine(captureDirectory,"layout-font-"+font+".png"));
     }
    }
