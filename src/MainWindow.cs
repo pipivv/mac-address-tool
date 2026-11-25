@@ -45,6 +45,10 @@ namespace MacTool {
   public UiController(bool demo){
    this.demo=demo;
    using(var stream=Assembly.GetExecutingAssembly().GetManifestResourceStream("MainWindow.xaml"))Window=(Window)XamlReader.Load(stream);
+   var assembly=Assembly.GetExecutingAssembly();
+   var author=assembly.GetCustomAttribute<AssemblyCompanyAttribute>().Company;
+   var release=assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion;
+   C<TextBlock>("ReleaseCredit").Text=author+" · v"+release;
    using(var iconStream=Assembly.GetExecutingAssembly().GetManifestResourceStream("app.ico")){
     var icon=new IconBitmapDecoder(iconStream,BitmapCreateOptions.PreservePixelFormat,BitmapCacheOption.OnLoad);
     Window.Icon=icon.Frames.OrderByDescending(frame=>frame.PixelWidth).First();
