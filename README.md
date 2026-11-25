@@ -8,6 +8,8 @@ Windows 网卡 MAC 地址生成与管理工具。单个 EXE，离线运行，无
 
 在 [Releases](https://github.com/pipivv/mac-address-tool/releases) 下载 `MacAddressTool.exe`，双击运行。
 
+如果启动时提示缺少 .NET Framework 4.8，请安装微软官方运行时，再打开 `MacAddressTool.exe`。[在线安装](https://dotnet.microsoft.com/zh-cn/download/dotnet-framework/thank-you/net48-web-installer) · [离线安装包](https://dotnet.microsoft.com/zh-cn/download/dotnet-framework/thank-you/net48-offline-installer)
+
 1. 选择要操作的本机网卡。
 2. 搜索并选择厂商，或切换到随机厂商。
 3. 生成地址，可复制或应用到所选网卡。
@@ -27,7 +29,7 @@ Windows 网卡 MAC 地址生成与管理工具。单个 EXE，离线运行，无
 
 ## 兼容性
 
-支持 Windows 10 / 11 x64，使用系统自带的 .NET Framework 4.8。并非所有网卡驱动都支持覆盖 MAC，尤其不能假定 Intel 无线驱动支持。Windows 的无线随机硬件地址设置也可能影响实际地址。
+支持 Windows 10 / 11 x64，需要 .NET Framework 4.8 或兼容的更高版本。并非所有网卡驱动都支持覆盖 MAC，尤其不能假定 Intel 无线驱动支持。Windows 的无线随机硬件地址设置也可能影响实际地址。
 
 厂商模式保留 IEEE 登记前缀；本地管理地址模式不保留厂商前缀。匹配前缀不能证明硬件型号，也不保证生成地址在所在网络中绝不重复。工具不修改网卡固件。
 

@@ -1,5 +1,7 @@
 # v2.0.0
 
+如果启动时提示缺少 .NET Framework 4.8，请安装微软官方运行时，再打开 `MacAddressTool.exe`。[在线安装](https://dotnet.microsoft.com/zh-cn/download/dotnet-framework/thank-you/net48-web-installer) · [离线安装包](https://dotnet.microsoft.com/zh-cn/download/dotnet-framework/thank-you/net48-offline-installer)
+
 - 重新设计 Windows 原生界面，参照 iOS Liquid Glass 的材质层级和交互反馈。
 - 加入明暗外观、按压反馈、分段选择器过渡、开关动画及减少动态效果选项。
 - 保留一屏显示、三个字号按钮和厂商分页。
