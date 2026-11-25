@@ -70,7 +70,8 @@ namespace MacTool {
    C<ComboBox>("Adapters").SelectionChanged+=(s,e)=>{if(!binding)ShowAdapter();};
    foreach(var name in new[]{"ChooseVendor","RandomVendor","LocalMode"}){
     C<RadioButton>(name).Checked+=async(s,e)=>{
-     AnimateSegment("VendorThumb",IsLocal?196:IsRandom?98:0);
+     AnimateSegment("VendorThumb",IsLocal?232:IsRandom?116:0);
+     if(!IsLocal)BindPage(true);
      RefreshControls();
      if(!IsLocal && (searching || C<TextBox>("Search").Text.Trim()!=appliedQuery)){
       searchTimer.Stop();await Search(true);
@@ -79,7 +80,14 @@ namespace MacTool {
    }
    C<TextBox>("Search").TextChanged+=(s,e)=>{searchVersion++;C<TextBlock>("SearchHint").Visibility=string.IsNullOrEmpty(C<TextBox>("Search").Text)?Visibility.Visible:Visibility.Collapsed;searchTimer.Stop();searchTimer.Start();RefreshControls();};
    searchTimer.Tick+=async(s,e)=>{searchTimer.Stop();await Search(false);};
-   C<ListBox>("Vendors").SelectionChanged+=(s,e)=>{if(binding)return;selectedVendor=C<ListBox>("Vendors").SelectedItem as string;if(database!=null&&!IsRandom)Generate();};
+   C<ListBox>("Vendors").SelectionChanged+=(s,e)=>{
+    if(binding||IsLocal)return;
+    var chosen=C<ListBox>("Vendors").SelectedItem as string;
+    if(chosen==null)return;
+    selectedVendor=chosen;
+    if(IsRandom)C<RadioButton>("ChooseVendor").IsChecked=true;
+    else Generate();
+   };
    C<Button>("Previous").Click+=(s,e)=>ChangePage(-1);C<Button>("Next").Click+=(s,e)=>ChangePage(1);
    C<Grid>("MainContent").SizeChanged+=(s,e)=>UpdatePageSize();
    C<Button>("Generate").Click+=async(s,e)=>{searchTimer.Stop();if(!IsLocal&&(C<TextBox>("Search").Text.Trim()!=appliedQuery||searching))await Search(true);else Generate();};
@@ -122,7 +130,16 @@ namespace MacTool {
   void ShowAdapter(){var a=SelectedAdapter;C<TextBlock>("PermanentLabel").Text=a!=null && a.Physical?"出厂默认地址":"永久 MAC 地址";C<TextBlock>("CurrentMac").Text=a==null?"—":Mac.Format(a.Current);C<TextBlock>("PermanentMac").Text=a==null?"—":Mac.Format(a.Permanent);C<TextBlock>("AdapterState").Text=a==null?(networkLoading?"正在读取网卡…":"未找到网卡"):(a.Wireless?"无线网卡":"以太网")+" · "+(a.Status=="Up"?"已连接":a.Disabled?"已禁用":"未连接");RefreshControls();}
   async Task Search(bool generateAfter){
    if(database==null)return;int version=++searchVersion;string query=C<TextBox>("Search").Text.Trim(),selected=selectedVendor;searching=true;RefreshControls();
-   try{var result=await Task.Run(()=>database.Query(query,selected));if(version!=searchVersion)return;searching=false;ApplyQuery(result);if(generateAfter)Generate();}
+   try{
+    var result=await Task.Run(()=>database.Query(query,selected));
+    if(version!=searchVersion)return;
+    searching=false;
+    ApplyQuery(result);
+    if(!IsLocal){
+     if(matches.Count==0)C<TextBox>("Address").Clear();
+     else if(generateAfter||IsRandom||selectedVendor!=selected||!Mac.Valid(C<TextBox>("Address").Text))Generate();
+    }
+   }
    catch(Exception ex){if(version==searchVersion){searching=false;Error("搜索失败",ex.Message);}}finally{RefreshControls();}
   }
   void ApplyQuery(VendorQuery query){matches=query.Matches;visible=query.Visible;appliedQuery=query.Text;MaximumVisibleCount=Math.Max(MaximumVisibleCount,visible.Count);page=0;BindPage(true);RefreshControls();}
@@ -139,8 +156,14 @@ namespace MacTool {
   void BindPage(bool preserve){
    int index=visible.FindIndex(s=>s.Equals(selectedVendor,StringComparison.OrdinalIgnoreCase));if(preserve&&index>=0)page=index/Math.Max(1,pageSize);
    int pages=Math.Max(1,(visible.Count+pageSize-1)/pageSize);page=Math.Max(0,Math.Min(page,pages-1));var rows=visible.Skip(page*pageSize).Take(pageSize).ToList();
-   binding=true;C<ListBox>("Vendors").ItemsSource=rows;C<ListBox>("Vendors").SelectedItem=rows.FirstOrDefault(s=>s.Equals(selectedVendor,StringComparison.OrdinalIgnoreCase))??rows.FirstOrDefault();binding=false;
-   selectedVendor=C<ListBox>("Vendors").SelectedItem as string;C<TextBlock>("PageInfo").Text=(visible.Count==0?0:page+1)+" / "+(visible.Count==0?0:pages);RefreshControls();
+   var list=C<ListBox>("Vendors");
+   binding=true;
+   try{
+    list.ItemsSource=rows;
+    list.SelectedItem=IsRandom?null:rows.FirstOrDefault(s=>s.Equals(selectedVendor,StringComparison.OrdinalIgnoreCase))??rows.FirstOrDefault();
+    if(!IsRandom)selectedVendor=list.SelectedItem as string;
+   }finally{binding=false;}
+   C<TextBlock>("PageInfo").Text=(visible.Count==0?0:page+1)+" / "+(visible.Count==0?0:pages);RefreshControls();
   }
   void ChangePage(int direction){page+=direction;BindPage(false);if(!IsRandom)Generate();}
   void Generate(){
@@ -150,13 +173,13 @@ namespace MacTool {
    var excluded=new HashSet<string>(used);foreach(var a in adapters)if(a.Current!=null)excluded.Add(a.Current);
    try{VendorBlock block;string value=generator.Generate(vendor,IsLocal,excluded,out block);used.Add(value);if(used.Count>10000)used.Clear();C<TextBox>("Address").Text=Mac.Format(value);Reveal(C<TextBox>("Address"));}catch(Exception ex){Error("未能生成地址",ex.Message);}
   }
-  void ShowMatch(){string text=C<TextBox>("Address").Text;var block=database==null?null:database.Lookup(text);C<TextBlock>("Match").Text=!Mac.Valid(text)?"请输入有效的单播 MAC 地址":Mac.Local(text)?"本地管理地址":block==null?"未找到对应厂商":block.Vendor+" · "+block.Prefix;RefreshControls();}
+  void ShowMatch(){string text=C<TextBox>("Address").Text;var block=database==null?null:database.Lookup(text);C<TextBlock>("Match").Text=!Mac.Valid(text)?"请输入有效的单播 MAC 地址":Mac.Local(text)?(IsLocal?"可直接编辑上方地址":"本地管理地址"):block==null?"未找到对应厂商":block.Vendor+" · "+block.Prefix;RefreshControls();}
   void RefreshControls(){
    bool ready=database!=null&&!busy,local=IsLocal;
    C<TextBox>("Search").IsEnabled=ready&&!local;C<ListBox>("Vendors").IsEnabled=ready&&!local&&!searching;
    C<StackPanel>("VendorTools").Visibility=local?Visibility.Collapsed:Visibility.Visible;
    foreach(var name in new[]{"ChooseVendor","RandomVendor","LocalMode"})C<RadioButton>(name).IsEnabled=ready;
-   C<Button>("Generate").Content=local?"生成本地地址":IsRandom?"随机厂商生成":"按所选厂商生成";
+   C<Button>("Generate").Content=local?"随机生成地址":IsRandom?"随机厂商生成":"按所选厂商生成";
    C<Button>("Generate").IsEnabled=ready&&(local||(!searching&&matches.Count>0));
    C<Button>("Copy").IsEnabled=Mac.Valid(C<TextBox>("Address").Text);
    var a=SelectedAdapter;bool change=!demo&&!busy&&!networkLoading&&a!=null&&a.RegistryPath!=null;
@@ -238,6 +261,16 @@ namespace MacTool {
    foreach(string query in new[]{"英特尔","苹果","a","华为",""}){C<TextBox>("Search").Text=query;searchTimer.Stop();await Search(true);if(visible.Count>100)throw new Exception("Visible vendor limit exceeded.");}
    int old=page;if(visible.Count>pageSize){ChangePage(1);if(page==old)throw new Exception("Paging failed.");ChangePage(-1);}
    for(int i=0;i<3;i++){C<RadioButton>("Size"+i).IsChecked=true;await Task.Delay(30);}SetFontSize(1);
+   var vendorList=C<ListBox>("Vendors");
+   C<RadioButton>("RandomVendor").IsChecked=true;
+   ChangePage(1);
+   if(vendorList.SelectedItem!=null)throw new Exception("Random mode shows a manual selection.");
+   var picked=(string)vendorList.Items[vendorList.Items.Count-1];
+   var beforePick=C<TextBox>("Address").Text;
+   vendorList.SelectedItem=picked;
+   var pickedBlock=database.Lookup(C<TextBox>("Address").Text);
+   if(IsRandom||C<TextBox>("Address").Text==beforePick||pickedBlock==null||pickedBlock.Vendor!=picked)
+    throw new Exception("Selecting a vendor in random mode must immediately generate its MAC.");
    var themeButton=C<Button>("Theme");
    foreach(bool motionOff in new[]{false,true}){
     reducedMotion=motionOff;
@@ -275,7 +308,7 @@ namespace MacTool {
   void ValidateViewport(){var viewport=C<Grid>("Viewport");foreach(string name in new[]{"Adapters","Search","Vendors","Generate","Copy","Apply","Reset","Undo","Size0","Size1","Size2","ChooseVendor","RandomVendor","Address","Theme","Motion","Minimize","Maximize","Close"}){var element=C<FrameworkElement>(name);var bounds=element.TransformToAncestor(viewport).TransformBounds(new Rect(new Point(),element.RenderSize));if(bounds.Left< -1||bounds.Top< -1||bounds.Right>viewport.ActualWidth+1||bounds.Bottom>viewport.ActualHeight+1)throw new Exception("Control outside the single-page viewport: "+name);}}
   int ValidateText(){
    int checks=0;
-   foreach(string name in new[]{"Size0","Size1","Size2","ChooseVendor","RandomVendor","Generate","Copy","Apply","Reset","Undo","Theme","Motion"}){
+   foreach(string name in new[]{"Size0","Size1","Size2","ChooseVendor","RandomVendor","LocalMode","Generate","Copy","Apply","Reset","Undo","Theme","Motion"}){
     var control=C<Control>(name);foreach(var text in VisualChildren<TextBlock>(control)){
      var measure=new TextBlock{Text=text.Text,FontFamily=text.FontFamily,FontSize=text.FontSize,FontWeight=text.FontWeight,FontStyle=text.FontStyle,FontStretch=text.FontStretch};measure.Measure(new Size(double.PositiveInfinity,double.PositiveInfinity));
      if(text.ActualHeight+.75<measure.DesiredSize.Height||text.ActualWidth+.75<measure.DesiredSize.Width)throw new Exception("Button text clipped: "+name);checks++;

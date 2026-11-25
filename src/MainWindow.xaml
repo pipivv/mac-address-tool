@@ -118,12 +118,12 @@
      </Grid>
      <Border Grid.Column="2" Style="{StaticResource Card}" VerticalAlignment="Top"><Grid><Grid.RowDefinitions><RowDefinition Height="46"/><RowDefinition Height="Auto"/><RowDefinition Height="27"/><RowDefinition Height="64"/><RowDefinition Height="32"/><RowDefinition Height="48"/></Grid.RowDefinitions>
       <Grid><TextBlock Text="厂商与地址" Style="{StaticResource Heading}" VerticalAlignment="Center"/>
-       <Border HorizontalAlignment="Right" Width="300" Height="40" CornerRadius="20" Background="{DynamicResource FieldBrush}" Padding="3">
-        <Grid><Border x:Name="VendorThumb" Background="{DynamicResource SelectionBrush}" HorizontalAlignment="Left" Width="98" CornerRadius="17"><Border.RenderTransform><TranslateTransform/></Border.RenderTransform></Border>
+       <Border HorizontalAlignment="Right" Width="354" Height="40" CornerRadius="20" Background="{DynamicResource FieldBrush}" Padding="3">
+        <Grid><Border x:Name="VendorThumb" Background="{DynamicResource SelectionBrush}" HorizontalAlignment="Left" Width="116" CornerRadius="17"><Border.RenderTransform><TranslateTransform/></Border.RenderTransform></Border>
          <UniformGrid Columns="3">
           <RadioButton x:Name="ChooseVendor" Content="自选厂商" GroupName="GenerationMode" IsChecked="True" Style="{StaticResource Segment}"/>
           <RadioButton x:Name="RandomVendor" Content="随机厂商" GroupName="GenerationMode" Style="{StaticResource Segment}"/>
-          <RadioButton x:Name="LocalMode" Content="本地地址" GroupName="GenerationMode" Style="{StaticResource Segment}"/>
+          <RadioButton x:Name="LocalMode" Content="自定义地址" GroupName="GenerationMode" Style="{StaticResource Segment}"/>
          </UniformGrid>
         </Grid>
        </Border>
